@@ -13,6 +13,7 @@ const __dirname = path.dirname(__filename);
 // Routes
 import fooRoutes from "./routes/foo.js";
 import messagesRoutes from "./routes/messages.js";
+import authRoutes from "./routes/auth.js";
 
 // Socket.io emitter
 import { getMessages } from "./socket.io/messages.js";
@@ -23,7 +24,6 @@ import helmet from "helmet";
 import xssClean from "xss-clean";
 import rateLimit from "express-rate-limit";
 import hpp from "hpp";
-
 
 // load env vars
 dotenv.config();
@@ -73,6 +73,7 @@ app.use(hpp()); //prevent http param polution
 // Using the routes
 app.use("/api/foo", fooRoutes);
 app.use("/api/messages", messagesRoutes);
+app.use("/api/auth", authRoutes);
 
 // static files in public folder
 app.use(express.static(path.join(__dirname, "public")));

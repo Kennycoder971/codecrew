@@ -1,32 +1,33 @@
-import asyncHandler from "../utils/asyncHandler";
-import ErrorResponse from "../utils/errorResponse";
-import prismadb from "../db/prismadb";
+import asyncHandler from "../utils/asyncHandler.js";
+import ErrorResponse from "../utils/errorResponse.js";
+import prismadb from "../db/prismadb.js";
 import bcrypt from "bcrypt";
 import { User } from "@prisma/client";
-import { sendTokenResponse } from "../utils/sendTokenResponse";
-
+import { sendTokenResponse } from "../utils/sendTokenResponse.js";
+import { userValidationSchema } from "../validations/index.js";
 /**
  * @date      2022-06-22
  * @desc      Register user
  * @route     GET /api/auth/register
  * @access    Public
  */
-exports.register = asyncHandler(async (req, res, next) => {
-  const { name, email } = req.body;
+export const register = asyncHandler(async (req, res, next) => {
+  const { name, email, password } = await userValidationSchema.validateAsync(
+    req.body
+  );
+
   let user: User | null;
 
   // Check if name exists
   user = await prismadb.user.findFirst({
-    where: {
-      name: name,
-    },
+    where: { name: name },
   });
 
   if (user) {
     return next(new ErrorResponse("This user already exists", 400));
   }
   // Check if email exists
-  user = await prismadb.user.findFirst({
+  user = await prismadb.user.findUnique({
     where: {
       email,
     },
@@ -36,8 +37,14 @@ exports.register = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse("This email is already used", 400));
   }
 
+  const hashedPassword = await bcrypt.hash(password, 10);
+
   user = await prismadb.user.create({
-    data: req.body,
+    data: {
+      name,
+      email,
+      hashedPassword,
+    },
   });
 
   sendTokenResponse(user, 201, res);
@@ -49,7 +56,7 @@ exports.register = asyncHandler(async (req, res, next) => {
  * @route     POST /api/auth/login
  * @access    Public
  */
-exports.login = asyncHandler(async (req, res, next) => {
+export const login = asyncHandler(async (req, res, next) => {
   let user: User | null;
   const { email, password } = req.body;
 
@@ -82,7 +89,7 @@ exports.login = asyncHandler(async (req, res, next) => {
  * @route     GET /api/auth/logout
  * @access    Public
  */
-exports.logout = asyncHandler(async (req, res, next) => {
+export const logout = asyncHandler(async (req, res, next) => {
   res.cookie("token", "none", {
     expires: new Date(Date.now() + 10 * 1000),
     httpOnly: true,
@@ -100,7 +107,7 @@ exports.logout = asyncHandler(async (req, res, next) => {
  * @route     GET /api/auth/me
  * @access    Private
  */
-exports.getMe = asyncHandler(async (req, res, next) => {
+export const getMe = asyncHandler(async (req, res, next) => {
   // user is already available in req due to the protect middleware
   const user = req.user;
 
