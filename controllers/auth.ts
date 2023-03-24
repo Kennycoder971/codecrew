@@ -116,3 +116,67 @@ export const getMe = asyncHandler(async (req, res, next) => {
     data: user,
   });
 });
+
+/**
+ * @desc    Update User Password
+ * @route   PUT /api/auth/updatePassword
+ * @access  Private
+ */
+export const updatePassword = asyncHandler(async (req, res, next) => {
+  // password ops
+  const { oldPassword, newPassword } = req.body;
+  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{6,}$/;
+
+  // check password input
+  if (!newPassword || !oldPassword) {
+    return next(
+      new ErrorResponse(
+        "New Password and Old Password fields are required",
+        400
+      )
+    );
+  }
+
+  // check password validity
+  if (regex.test(newPassword) === false) {
+    return next(
+      new ErrorResponse(
+        "Please enter a valid new password, at least one lowercase and uppercase letter and one number",
+        400
+      )
+    );
+  }
+
+  // check if password matches with one in db
+  const user = await prismadb.user.findFirst({
+    where: {
+      id: req.user.id,
+    },
+  });
+  if (!user) {
+    return next(new ErrorResponse("User not found", 404));
+  }
+
+  const isMatch = await bcrypt.compare(oldPassword, user.hashedPassword);
+
+  // if match
+  if (!isMatch) {
+    return next(new ErrorResponse("Invalid credentials", 401));
+  }
+
+  // change password
+  const newHashedPassword = await bcrypt.hash(newPassword, 10);
+
+  // save
+  const updatedUser = await prismadb.user.update({
+    where: {
+      id: req.user.id,
+    },
+    data: {
+      hashedPassword: newHashedPassword,
+    },
+  });
+
+  // generate JWT
+  sendTokenResponse(updatedUser, 200, res);
+});
