@@ -2,10 +2,11 @@ import jwt from "jsonwebtoken";
 import asyncHandler from "../utils/asyncHandler.js";
 import ErrorResponse from "../utils/errorResponse.js";
 import prismadb from "../db/prismadb.js";
-import { Request, Response, NextFunction } from "express";
 
 export const protect = asyncHandler(async (req, res, next) => {
   let token;
+
+  console.log(req.headers.authorization);
 
   if (
     req.headers.authorization &&
