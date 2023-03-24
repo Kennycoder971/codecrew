@@ -1,8 +1,5 @@
-import { Request, Response, NextFunction } from "express";
-import { User } from "@prisma/client";
-interface CustomRequest extends Request {
-  user?: User;
-}
+import { CustomRequest } from "../interfaces/index.js";
+import { Response, NextFunction } from "express";
 
 const asyncHandler = function (
   callback: (req: CustomRequest, res: Response, next: NextFunction) => any
