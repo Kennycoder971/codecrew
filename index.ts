@@ -6,6 +6,7 @@ import colors from "colors";
 import cookieParser from "cookie-parser";
 import fileUpload from "express-fileupload";
 import http from "http";
+import errorHandler from "./middleware/error.js";
 import { Server } from "socket.io";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,6 +53,9 @@ io.on("connection", (socket) => {
   });
 });
 
+// static files in public folder
+app.use(express.static(path.join(__dirname, "public")));
+
 // invoke middlewares
 app.use(express.json());
 app.use(cookieParser());
@@ -75,8 +79,8 @@ app.use("/api/foo", fooRoutes);
 app.use("/api/messages", messagesRoutes);
 app.use("/api/auth", authRoutes);
 
-// static files in public folder
-app.use(express.static(path.join(__dirname, "public")));
+// Handle errors
+app.use(errorHandler);
 
 // Set PORT and run app
 const PORT = process.env.PORT || 5000;
