@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 import { User } from "@prisma/client";
 import { sendTokenResponse } from "../utils/sendTokenResponse.js";
 import { userValidationSchema } from "../validations/index.js";
+
 /**
  * @date      2022-06-22
  * @desc      Register user

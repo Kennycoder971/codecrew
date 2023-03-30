@@ -15,6 +15,7 @@ const __dirname = path.dirname(__filename);
 import fooRoutes from "./routes/foo.js";
 import messagesRoutes from "./routes/messages.js";
 import authRoutes from "./routes/auth.js";
+import users from "./routes/users.js";
 
 // Socket.io emitter
 import { getMessages } from "./socket.io/messages.js";
@@ -78,6 +79,7 @@ app.use(hpp()); //prevent http param polution
 app.use("/api/foo", fooRoutes);
 app.use("/api/messages", messagesRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/users", users);
 
 // Handle errors
 app.use(errorHandler);

@@ -1,92 +1,94 @@
-import prismadb from '../db/prismadb'
-import {Request, Response, NextFunction } from "express";
-
+import prismadb from "../db/prismadb.js";
+import { PaginationQueryObj } from "../interfaces/index.js";
 interface Pagination {
-    next ?:{
-        page?:number;
-        limit?:number;
-    },
-    prev ?:{
-        page?:number;
-        limit?:number;
-    }
+  next?: {
+    page?: number;
+    limit?: number;
+  };
+  prev?: {
+    page?: number;
+    limit?: number;
+  };
 }
 
+const advancedResults =
+  (model, include = "") =>
+  async (req, res, next) => {
+    // Copy req.query
+    const reqQuery = { ...req.query };
 
-const advancedResults = (model ) => async (req, res, next) => {
-  let query;
+    // Fields to exclude
+    const removeFields = ["select", "page", "limit", "sort"];
 
-  // Copy req.query
-  const reqQuery = { ...req.query };
+    // Loop over removeFields and delete them from reqQuery
+    removeFields.forEach((param) => delete reqQuery[param]);
 
-  // Fields to exclude
-  const removeFields = ["select", "sort", "page", "limit"];
+    // Create query object
+    let queryObj: PaginationQueryObj = { where: reqQuery };
 
-  // Loop over removeFields and delete them from reqQuery
-  removeFields.forEach((param) => delete reqQuery[param]);
+    // Select Fields
+    if (req.query.select) {
+      const fields = req.query.select.split(",");
 
-  // Create query object
-  let queryObj = { where: {} };
-
-  // Finding resource
-  query = prismadb[model].findMany(queryObj);
-
-  // Select Fields
-  if (req.query.select) {
-    const fields = req.query.select.split(",");
-    query = query.select({
-      include: fields.reduce((acc, field) => {
+      queryObj.select = fields.reduce((acc, field) => {
         acc[field] = true;
         return acc;
-      }, {})
-    });
-  }
+      }, {});
+    }
 
-  // Sort
-  if (req.query.sort) {
-    const sortBy = req.query.sort.split(",").join(" ");
-    query = query.orderBy(sortBy);
-  } else {
-    query = query.orderBy({ createdAt: 'desc' });
-  }
+    // Sort
+    if (req.query.sort) {
+      const [key, val] = req.query.sort.split(".");
+      queryObj.orderBy = {
+        [key?.toLowerCase()]: val?.toLowerCase() || "asc",
+      };
+    } else {
+      queryObj.orderBy = { createdAt: "desc" };
+    }
 
-  // Pagination
-  const page = parseInt(req.query.page, 10) || 1;
-  let limit = parseInt(req.query.limit, 10) || 15;
-  if (limit > 100) limit = 100;
-  const offset = (page - 1) * limit;
-  const total = await prismadb[model].count({ where: queryObj.where });
+    if (include) {
+      queryObj.include = { [include.toLowerCase()]: true };
+    }
 
-  query = query.skip(offset).take(limit);
+    // Pagination
+    const page = parseInt(req.query.page, 10) || 1;
+    let limit = parseInt(req.query.limit, 10) || 15;
+    if (limit > 100) limit = 100;
+    const offset = (page - 1) * limit;
+    const total = await prismadb[model].count();
 
-  // Executing query
-  const results = await query;
+    queryObj.skip = offset;
 
-  // Pagination result
-  const pagination:Pagination = {};
+    queryObj.take = limit;
 
-  if (offset + limit < total) {
-    pagination.next = {
-      page: page + 1,
-      limit,
+    // Executing query Finding resource
+    const results = await prismadb[model].findMany(queryObj);
+
+    // Pagination result
+    const pagination: Pagination = {};
+
+    if (offset + limit < total) {
+      pagination.next = {
+        page: page + 1,
+        limit,
+      };
+    }
+
+    if (offset > 0) {
+      pagination.prev = {
+        page: page - 1,
+        limit,
+      };
+    }
+
+    res.advancedResults = {
+      success: true,
+      count: results.length,
+      pagination,
+      data: results,
     };
-  }
 
-  if (offset > 0) {
-    pagination.prev = {
-      page: page - 1,
-      limit,
-    };
-  }
-
-  res.advancedResults = {
-    success: true,
-    count: results.length,
-    pagination,
-    data: results,
+    next();
   };
 
-  next();
-};
-
-module.exports = advancedResults;
+export default advancedResults;
